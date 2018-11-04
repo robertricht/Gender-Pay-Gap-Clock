@@ -1,0 +1,399 @@
+#define IN1  12
+#define IN2  13
+#define IN3  14
+#define IN4  15
+//int Steps = 36864; //overall run time (in steps)
+int stepsPerRevolve = 4096; // change according to motor
+int cstep = 0;
+int genderpaygap = 20;
+boolean test = true;
+int timeInMicroSec;
+int timeWindow1; int timeWindow2; int timeWindow3;
+int runTime1; int runTime2; int runTime3;
+const char* host = "en.wikipedia.org";
+
+#include <ESP8266WiFi.h> // Include the ESP8266 Library
+
+#include <ArduinoJson.h>
+
+
+const char* ssid     = "Motionlab-Guest"; // Enter your WiFi network name
+const char* password = "motionlab.guest"; // Enter your WiFi password
+int keyIndex = 0;            // your network key Index number (needed only for WEP)
+
+int status = WL_IDLE_STATUS;
+// if you don't want to use DNS (and reduce your sketch size)
+// use the numeric IP instead of the name for the server:
+//IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
+//char server[] = "en.wikipedia.org";    // name address for Google (using DNS)
+//String location = "/w/api.php?action=query&titles=Gender+Pay+Gap&prop=info&intoken=edit&format=json";
+
+char inString[32];
+int stringPos = 0;
+boolean startRead = false;
+
+const int httpsPort = 443;
+
+// Initialize the Ethernet client library
+// with the IP address and port of the server
+// that you want to connect to (port 80 is default for HTTP):
+WiFiClient client;
+
+void setup()
+{
+  Serial.begin(9600);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  //Serial.println("\nStarting connection to server...");
+  //Serial.println("connected to wifi");
+  //  // if you get a connection, report back via serial:
+  //  if (client.connect(server, 80)) {
+  //    Serial.println("connected to server");
+  //    // Make a HTTP request:
+  //    client.println("GET /search?q=arduino HTTP/1.1");
+  //    client.println("Host: www.google.com");
+  //    client.println("Connection: close");
+  //    client.println();
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void loop()
+{
+  Serial.print("We are here 01");
+  //if (test == true){
+  //  while (client.available()) {
+  //    char c = client.read();
+  //    Serial.write(c);
+  //  }
+  //
+  //  // if the server's disconnected, stop the client:
+  //  if (!client.connected()) {
+  //    Serial.println();
+  //    Serial.println("disconnecting from server.");
+  //    client.stop();
+  //
+  //    // do nothing forevermore:
+  //    while (true){
+  //      delay(1000);
+  //    }
+  //  }
+
+
+
+  Serial.print("connecting to ");
+  Serial.println(host);
+  // Use WiFiClient class to create TCP connections
+  WiFiClient client;
+//  const int httpPort = 80;
+//  if (!client.connect(host, httpPort)) {
+//    Serial.println("connection failed");
+//    return;
+//  }
+
+  const char* host = "en.wikipedia.org";
+  // We now create a URI for the request
+  String url = "/w/api.php?action=query&titles=Test&prop=extracts&format=json";
+
+//  Serial.print("Requesting URL: ");
+//  Serial.println(url);
+
+
+
+  String payload = getJson(host, url);
+  Serial.println("request ended");
+  Serial.println(payload);
+
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(payload);
+
+
+  if (!root.success()) {
+    Serial.println("parseObject() failed");
+    // "bad";
+  }
+  else
+  {
+    String title = root["query"]["page"]["-1"]["title"];
+    Serial.println(title);
+  }
+
+  // This will send the request to the server
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+  // start waiting for the response
+  unsigned long lasttime = millis();
+  while (!client.available() && millis() - lasttime < 10000) {
+    delay(1); // wait max 10s for data
+  }
+  // Read all the lines of the reply from server and print them to Serial
+  while (client.available()) {
+    char readchar = client.read();
+    Serial.print(readchar);
+  }
+  Serial.println();
+  Serial.println("closing connection");
+  delay(5000);
+
+  //
+  ////port 80 is typical of a www page
+  //if (client.connect(server, 80)) {
+  //
+  //Serial.println("connected");
+  ////client.print("GET ");
+  ////client.println(location);
+  ////client.println();
+  //
+  //
+  //  client.print(String("GET ") + "/" + " HTTP/1.1\r\n" +
+  //               "Host: " + "destatis.de" + "\r\n" +
+  //               "Connection: close\r\n\r\n");
+  ////Connected – Read the page
+  ////Serial.println (readPage()); //go and read the output
+  //
+  //// start waiting for the response
+  //  unsigned long lasttime = millis();
+  //  while (!client.available() && millis() - lasttime < 10000) {
+  //    Serial.print("waiting for client");
+  //    delay(1);}   // wait max 1s for data
+  //
+  //while(client.available()){
+  //    String line = client.readStringUntil('\r');
+  //    Serial.print(line);
+  //  }
+  //}else{
+  //
+  //Serial.println ("connection failed");
+  //
+  //}
+  //
+
+
+
+
+
+  Serial.print("We are here 02");
+  int timeWindow1 = 8;
+  int timeWindow2 = 8;
+  int timeWindow3 = 8;
+  int runTime1 = 3600; //time per hour in seconds
+  int runTime2 = runTime1 + ((runTime1 / 100) * genderpaygap);
+  int runTime3 = runTime1 - ((runTime1 / 100) * genderpaygap);
+
+  //}else {
+
+
+  //int timeWindow1 = 8;
+  //int timeWindow2 = 8;
+  //int timeWindow3 = 8;
+  //
+  //int runTime1 = 3600; //time per hour in seconds
+  //int runTime2 = 7200;
+  //int runTime3 = 2000;
+  //Serial.print("We are here 03");
+  //}
+
+  for (int t1 = 0; t1 < timeWindow1; t1++) {
+    runOneTime(runTime1);
+  }
+  for (int t2 = 0; t2 < timeWindow2; t2++) {
+    runOneTime(runTime2);
+    Serial.print("We are here 04\n");
+  }
+  for (int t3 = 0; t3 < timeWindow3; t3++) {
+    runOneTime(runTime3);
+  }
+
+}
+
+String mostRecentDateString = "";
+
+String getJson(String host, String url) {
+
+  Serial.println("connecting to ");
+  Serial.println(host);
+
+  if (!client.connect(host.c_str(), httpsPort)) {
+    Serial.println("connection failed");
+    return "bad";
+  }
+
+  Serial.println("requesting URL ");
+  Serial.println(url);
+
+  client.println("GET /w/api.php?action=query&titles=Test&prop=extracts&format=json HTTP/1.1");
+  client.println("Host: en.wikipedia.org");
+  client.println("Connection: close");
+  client.println();
+
+  Serial.println("request sent");
+
+  while (client.connected()) {
+    Serial.print("Reading...");
+    
+   String line = client.readStringUntil('\n');
+    if (line.indexOf("Date") != -1)
+    {
+      mostRecentDateString = line;
+    }
+    Serial.println(line);
+    if (line == "\r") {
+      Serial.println("headers received");
+      break;
+
+  }
+  
+  }
+
+  String payload = client.readString();
+
+#ifdef PRINT_PAYLOAD
+  Serial.println("reply was:");
+  Serial.println("==========");
+  Serial.println(payload);
+  Serial.println("==========");
+#endif
+  return payload;
+}
+
+
+
+// do one recvolution in a given time (in seconds)
+void runOneTime( int timeInSec ) {
+
+  int timeInMicroSec = timeInSec * 1000;
+  for (int x = 0; x < stepsPerRevolve; x++)
+  {
+    step1();
+    delay(timeInMicroSec / stepsPerRevolve);
+
+  }
+
+}
+
+
+String readPage() {
+  //read the page, and capture & return everything between ‘<' and '>‘
+
+  stringPos = 0;
+  memset( &inString, 0, 32 ); //clear inString memory
+
+  unsigned long lasttime = millis();
+  while (!client.available() && millis() - lasttime < 10000) {
+    Serial.println("waiting for client");
+    delay(10);
+  }
+
+  if (client.available()) {
+
+    Serial.println("client available");
+
+    while (client.available()) {
+      Serial.print(client.read());
+    }
+    return "reading end";
+
+    //char c = client.read();
+    //Serial.println(c);
+    //if (c == '<' ) { //'<' is our begining character
+    //  startRead = true; //Ready to start reading the part
+    //  }else if(startRead){
+    //    if(c != '>'){ //'>' is our ending character
+    //  }
+    //inString[stringPos] = c;
+    //stringPos ++;
+    //}
+    //else{
+    //
+    ////got what we need here! We can disconnect now
+    //startRead = false;
+    //client.stop();
+    //client.flush();
+    //Serial.println("disconnecting.");
+    //return inString;
+    //
+    //}
+  }
+}
+
+
+
+// do one step (analogue motor control)
+void step1()
+{
+  //stepp
+  switch (cstep)
+  {
+    case 0:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, HIGH);
+      break;
+    case 1:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, HIGH);
+      digitalWrite(IN4, HIGH);
+      break;
+    case 2:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, HIGH);
+      digitalWrite(IN4, LOW);
+      break;
+    case 3:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, HIGH);
+      digitalWrite(IN3, HIGH);
+      digitalWrite(IN4, LOW);
+      break;
+    case 4:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, HIGH);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, LOW);
+      break;
+    case 5:
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, HIGH);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, LOW);
+      break;
+    case 6:
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, LOW);
+      break;
+    case 7:
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, HIGH);
+      break;
+    default:
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, LOW);
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, LOW);
+      break;
+  }
+
+  cstep = cstep + 1;
+  if (cstep == 8)
+  {
+    cstep = 0;
+  }
+}
